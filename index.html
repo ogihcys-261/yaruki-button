@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>やる気ボタン</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+/* Layout: 1画面の縦並び。中央に巨大ボタン、上にやる気ゲージ、下に独り言。ボタンの色だけが派手で、他は静か。 */
+:root {
+  --bg: #eef0f3;
+  --fg: #1f2630;
+  --muted: #667085;
+  --track: #d9dde4;
+  --card: #f8f9fb;
+  --line: #cfd4dc;
+  --btn-h: 22;
+  --btn-s: 92%;
+  --btn-l: 54%;
+  --font-display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181f;
+    --fg: #e6e9ef;
+    --muted: #8b94a5;
+    --track: #262c37;
+    --card: #1b2029;
+    --line: #2d3441;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181f;
+  --fg: #e6e9ef;
+  --muted: #8b94a5;
+  --track: #262c37;
+  --card: #1b2029;
+  --line: #2d3441;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main {
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+header { display: flex; flex-direction: column; gap: 4px; }
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+}
+.sub { margin: 0; color: var(--muted); font-size: 0.875rem; }
+
+.gauge { display: flex; flex-direction: column; gap: 8px; }
+.gauge-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.label { font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); }
+.value { font-family: var(--font-display); font-size: 2.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.value small { font-size: 0.9rem; margin-left: 4px; color: var(--muted); font-family: var(--font-body); }
+.track { height: 14px; border-radius: 7px; background: var(--track); overflow: hidden; }
+.fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 7px;
+  background: hsl(var(--btn-h) var(--btn-s) var(--btn-l));
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.stage { display: flex; justify-content: center; padding-block: 8px; }
+#push {
+  width: min(64vw, 260px);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  background: hsl(var(--btn-h) var(--btn-s) var(--btn-l));
+  box-shadow: 0 10px 0 hsl(var(--btn-h) var(--btn-s) calc(var(--btn-l) - 18%));
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+#push:active, #push.down {
+  transform: translateY(8px);
+  box-shadow: 0 2px 0 hsl(var(--btn-h) var(--btn-s) calc(var(--btn-l) - 18%));
+}
+#push:focus-visible { outline: 3px solid var(--fg); outline-offset: 6px; }
+#push .big { display: block; }
+#push .small { display: block; margin-top: 6px; font-family: var(--font-body); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; opacity: 0.9; }
+
+.mono {
+  margin: 0;
+  padding: 16px;
+  min-height: 5.5em;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 1rem;
+  text-wrap: balance;
+}
+.stats { display: flex; gap: 20px; flex-wrap: wrap; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.stats b { color: var(--fg); font-weight: 700; }
+
+.recover { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.recover button {
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+.recover button:hover { background: var(--card); }
+.recover button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+#recoverMsg { margin: 0; min-height: 1.6em; font-size: 0.8125rem; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fill, #push { transition: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>やる気ボタン</h1>
+    <p class="sub">押すたびに、やる気が1ずつ減ります。</p>
+  </header>
+
+  <section class="gauge" aria-label="やる気ゲージ">
+    <div class="gauge-top">
+      <span class="label">やる気</span>
+      <span class="value" id="value" aria-live="polite">100<small>/ 100</small></span>
+    </div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </section>
+
+  <div class="stage">
+    <button id="push" type="button">
+      <span class="big">押す</span>
+      <span class="small" id="pushSub">やる気を出す</span>
+    </button>
+  </div>
+
+  <p class="mono" id="mono" aria-live="polite">まだやる気はあります。</p>
+
+  <div class="stats">
+    <span>今日の押下 <b id="today">0</b> 回</span>
+    <span>通算 <b id="total">0</b> 回</span>
+  </div>
+
+  <div class="recover">
+    <button id="recover" type="button">やる気を回復する</button>
+    <p id="recoverMsg"></p>
+  </div>
+</main>
+
+<script>
+(function () {
+  var MAX = 100;
+  var KEY = "yaruki-button-v1";
+
+  // 段階ごとの独り言。上から順に「その値以上」で採用される。
+  var LINES = [
+    [100, "まだやる気はあります。"],
+    [90,  "いい調子です。ただし減っています。"],
+    [80,  "押す必要は特にありませんでした。"],
+    [70,  "なぜ押したんですか。"],
+    [60,  "半分を過ぎたあたりから、人は理由を探しはじめます。"],
+    [50,  "ちょうど半分です。ここが折り返しです。何のかは不明です。"],
+    [40,  "やる気が減るボタンだと、最初に書いてありました。"],
+    [30,  "ここまで来たら、もう同じです。"],
+    [20,  "手が勝手に動いています。やる気ではありません。"],
+    [10,  "残りわずかです。残っていても使い道はありません。"],
+    [1,   "あと少しで、やる気がゼロになります。"],
+    [0,   "やる気がなくなりました。もう押さなくていいです。"]
+  ];
+  var AFTER = [
+    "それでも押すんですね。",
+    "ゼロからは減りません。安心して押せます。",
+    "これはやる気ではなく、習慣です。",
+    "押した回数だけが増えていきます。",
+    "歩数計よりも、記録が増える速さは遅いです。"
+  ];
+  var RECOVER = [
+    "回復には明日まで待ってください。",
+    "回復ボタンはありますが、効果はありません。",
+    "押しても回復しません。減ってもいません。",
+    "回復は、日付が変わってから行われます。"
+  ];
+
+  var el = {
+    value: document.getElementById("value"),
+    fill: document.getElementById("fill"),
+    push: document.getElementById("push"),
+    pushSub: document.getElementById("pushSub"),
+    mono: document.getElementById("mono"),
+    today: document.getElementById("today"),
+    total: document.getElementById("total"),
+    recover: document.getElementById("recover"),
+    recoverMsg: document.getElementById("recoverMsg")
+  };
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+
+  var state = { yaruki: MAX, today: 0, total: 0, date: todayStr() };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (typeof s.total === "number") state.total = s.total;
+        if (s.date === todayStr()) {
+          if (typeof s.yaruki === "number") state.yaruki = Math.max(0, Math.min(MAX, s.yaruki));
+          if (typeof s.today === "number") state.today = s.today;
+        }
+      }
+    } catch (e) { /* 保存できない環境では毎回100から始まる */ }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function lineFor(v) {
+    for (var i = 0; i < LINES.length; i++) {
+      if (v >= LINES[i][0]) return LINES[i][1];
+    }
+    return LINES[LINES.length - 1][1];
+  }
+
+  function render(extra) {
+    var v = state.yaruki;
+    el.value.innerHTML = v + "<small>/ " + MAX + "</small>";
+    el.fill.style.width = (v / MAX * 100) + "%";
+
+    // やる気が減るほどボタンの色がくすむ(橙 → 灰)
+    var r = v / MAX;
+    var root = document.documentElement.style;
+    root.setProperty("--btn-h", String(Math.round(22 + (1 - r) * 190)));
+    root.setProperty("--btn-s", Math.round(10 + r * 82) + "%");
+    root.setProperty("--btn-l", Math.round(46 + r * 8) + "%");
+
+    el.pushSub.textContent = v === 0 ? "もう出ません" : "やる気を出す";
+    el.mono.textContent = extra || lineFor(v);
+    el.today.textContent = state.today;
+    el.total.textContent = state.total;
+  }
+
+  function press() {
+    if (state.date !== todayStr()) {
+      state.date = todayStr();
+      state.yaruki = MAX;
+      state.today = 0;
+    }
+    var wasZero = state.yaruki === 0;
+    if (!wasZero) state.yaruki -= 1;
+    state.today += 1;
+    state.total += 1;
+    save();
+    render(wasZero ? AFTER[state.today % AFTER.length] : null);
+  }
+
+  var recoverCount = 0;
+  function recover() {
+    el.recoverMsg.textContent = RECOVER[recoverCount % RECOVER.length];
+    recoverCount += 1;
+  }
+
+  el.push.addEventListener("click", press);
+  el.recover.addEventListener("click", recover);
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
